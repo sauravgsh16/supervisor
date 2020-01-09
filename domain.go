@@ -1,51 +1,46 @@
 package supervisor
 
 import (
+	"math/rand"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 var once sync.Once
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+	counter = time.Now().UnixNano()
+}
+
+func nextID() int64 {
+	return atomic.AddInt64(&counter, 1)
+}
+
+type event interface{}
+
 type domain struct {
-	wg       sync.WaitGroup
-	mux      sync.Mutex
-	services map[int64]*service
-	done     chan *service
-	count    int32
+	mux     sync.Mutex
+	nodes   map[int64]*Node
+	watchCh chan event
 }
 
 func newDomain() *domain {
 	var d domain
 	once.Do(func() {
 		d = domain{
-			services: make(map[int64]*service),
-			done:     make(chan *service),
+			nodes:   make(map[int64]*Node),
+			watchCh: make(chan event),
 		}
 	})
 
 	return &d
 }
 
-func (d *domain) add(id int64, s *service) {
+func (d *domain) add(id int64, n *Node) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	d.services[id] = s
-	atomic.AddInt32(&d.count, 1)
-}
-
-func (d *domain) num() int32 {
-	return atomic.LoadInt32(&d.count)
-}
-
-func (d *domain) multiplex(s *service) {
-	d.wg.Add(1)
-	go func() {
-		defer d.wg.Done()
-		select {
-		case <-s.done:
-			d.done <- s
-		}
-	}()
+	d.nodes[id] = n
 }

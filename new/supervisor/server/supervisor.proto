@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package supervisor;
+
+message Node {
+    NodeType type = 1;
+    enum NodeType {
+        Leader = 0;
+        Member = 1;
+    }
+}
+
+message RegisterNodeRequest {
+    Node node = 1;
+}
+
+message RegisterNodeResponse {
+    // id of added Node
+    int64 id = 1;
+}
+
+message NodeStatusRequest {
+    // Node id
+    int64 id = 1;
+}
+
+message NodeStatusResponse {
+    bool result = 1;
+}
+
+service NodeService {
+    rpc Register(RegisterNodeRequest) returns (RegisterNodeResponse);
+
+    rpc Watch(NodeStatusRequest) returns (NodeStatusResponse);
+}
