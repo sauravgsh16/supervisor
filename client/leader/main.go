@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	conn, err := grpc.Dial("127:0.0.1:9090", grpc.WithInsecure())
+	conn, err := grpc.Dial("127.0.0.1:9090", grpc.WithInsecure())
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
@@ -24,23 +24,25 @@ func main() {
 
 	registerReq := &supervisor.RegisterNodeRequest{
 		Node: &supervisor.Node{
-			Type: supervisor.Node_Member,
+			Type: supervisor.Node_Leader,
 		},
 	}
 
 	resp, err := c.Register(ctx, registerReq)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
 
-	fmt.Printf("%+v", resp)
+	fmt.Printf("Here %+v\n", resp)
 
 	waitReq := &supervisor.NodeStatusRequest{
 		Id: resp.Id,
 	}
 
-	t := time.Now()
 	respWatch, err := c.Watch(ctx, waitReq)
-
-	now := time.Now()
-	fmt.Printf("%v", now.Sub(t))
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
 
 	fmt.Printf("%t", respWatch.Result)
 }

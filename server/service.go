@@ -12,10 +12,6 @@ import (
 
 var counter int64
 
-type nodeService struct {
-	domain *domain
-}
-
 func init() {
 	rand.Seed(time.Now().UnixNano())
 	counter = time.Now().UnixNano()
@@ -25,9 +21,13 @@ func nextID() int64 {
 	return atomic.AddInt64(&counter, 1)
 }
 
-func newNodeService() *nodeService {
+type nodeService struct {
+	domain *domain
+}
+
+func newNodeService(ch chan interface{}) *nodeService {
 	return &nodeService{
-		domain: newDomain(),
+		domain: newDomain(ch),
 	}
 }
 
@@ -42,16 +42,20 @@ func (s *nodeService) Register(ctx context.Context, req *RegisterNodeRequest) (*
 }
 
 func (s *nodeService) Watch(ctx context.Context, req *NodeStatusRequest) (*NodeStatusResponse, error) {
-	done := s.domain.getdone(req.Id)
-	if done == nil {
-		return nil, status.Error(codes.Internal, "failed to find done channel")
+	n := s.domain.get(req.Id)
+	if n == nil {
+		return nil, status.Error(codes.Internal, "failed to find node")
 	}
+	ticker := time.NewTicker(1 * time.Second)
 loop:
 	for {
 		select {
-		case <-done:
+		case <-ticker.C:
+			s.domain.watchCh <- n
+		case <-n.done:
 			break loop
 		}
 	}
+	ticker.Stop()
 	return &NodeStatusResponse{Result: true}, nil
 }

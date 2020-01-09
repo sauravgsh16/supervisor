@@ -22,20 +22,22 @@ type server struct {
 	ctx      context.Context
 	grpc     *grpc.Server
 	listener net.Listener
+	done     chan interface{}
 }
 
 // NewServer returns a new server
 func NewServer(ctx context.Context, port string) Server {
 	return &server{
-		port:    port,
-		service: newNodeService(),
-		ctx:     ctx,
-		grpc:    grpc.NewServer(),
+		port: port,
+		ctx:  ctx,
+		done: make(chan interface{}),
 	}
 }
 
 func (s *server) registerService() error {
-	if s.grpc == nil || s.service == nil {
+	s.service = newNodeService(s.done)
+	s.grpc = grpc.NewServer()
+	if s.service == nil {
 		return errors.New("register called before definition")
 	}
 	RegisterNodeServiceServer(s.grpc, s.service)
@@ -58,7 +60,9 @@ func (s *server) run() error {
 
 	go func() {
 		for range ch {
+			log.Println("shutting down supervisor server....")
 			s.grpc.GracefulStop()
+			s.done <- true
 			<-s.ctx.Done()
 		}
 	}()
@@ -66,11 +70,11 @@ func (s *server) run() error {
 }
 
 func (s *server) Run() error {
-	if err := s.registerService(); err != nil {
+	if err := s.startListener(); err != nil {
 		return err
 	}
 
-	if err := s.startListener(); err != nil {
+	if err := s.registerService(); err != nil {
 		return err
 	}
 
