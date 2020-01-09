@@ -28,7 +28,7 @@ message NodeStatusResponse {
     bool result = 1;
 }
 
-service NodeService {
+service Supervise {
     rpc Register(RegisterNodeRequest) returns (RegisterNodeResponse);
 
     rpc Watch(NodeStatusRequest) returns (NodeStatusResponse);

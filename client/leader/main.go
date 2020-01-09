@@ -18,7 +18,7 @@ func main() {
 	}
 	defer conn.Close()
 
-	c := supervisor.NewNodeServiceClient(conn)
+	c := supervisor.NewSuperviseClient(conn)
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -32,8 +32,6 @@ func main() {
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-
-	fmt.Printf("Here %+v\n", resp)
 
 	waitReq := &supervisor.NodeStatusRequest{
 		Id: resp.Id,

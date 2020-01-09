@@ -40,7 +40,7 @@ func (s *server) registerService() error {
 	if s.service == nil {
 		return errors.New("register called before definition")
 	}
-	RegisterNodeServiceServer(s.grpc, s.service)
+	RegisterSuperviseServer(s.grpc, s.service)
 	return nil
 }
 
