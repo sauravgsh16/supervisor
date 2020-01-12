@@ -78,6 +78,6 @@ func (s *server) Run() error {
 		return err
 	}
 
-	log.Printf("supervisor server starting on port: %s", s.port)
+	log.Printf("supervisor server starting on port: %s\n", s.port)
 	return s.run()
 }
