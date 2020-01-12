@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -22,25 +23,50 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	var id string = "a_test_leader"
+
 	registerReq := &supervisor.RegisterNodeRequest{
 		Node: &supervisor.Node{
+			Id:   id,
 			Type: supervisor.Node_Leader,
 		},
 	}
 
 	resp, err := c.Register(ctx, registerReq)
+	if err != nil || !resp.Result {
+		log.Fatalf(err.Error())
+	}
+
+	waitReq := &supervisor.MemberStatusRequest{
+		Id: id,
+	}
+
+	done := make(chan interface{})
+	resSteam, err := c.WatchMember(context.Background(), waitReq)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
 
-	waitReq := &supervisor.NodeStatusRequest{
-		Id: resp.Id,
-	}
+	r := make(chan *supervisor.MemberStatusResponse)
 
-	respWatch, err := c.Watch(ctx, waitReq)
-	if err != nil {
-		log.Fatalf(err.Error())
-	}
+	go func(done chan interface{}) {
+		for {
+			resp, err := resSteam.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalf(err.Error())
+			}
+			select {
+			case r <- resp:
+			case <-done:
+				break
+			}
+		}
+	}(done)
 
-	fmt.Printf("%t", respWatch.Result)
+	for resp := range r {
+		fmt.Printf("%s\n", resp.DependentID)
+	}
 }

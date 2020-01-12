@@ -3,7 +3,8 @@ syntax = "proto3";
 package supervisor;
 
 message Node {
-    NodeType type = 1;
+    string id = 1;
+    NodeType type = 2;
     enum NodeType {
         Leader = 0;
         Member = 1;
@@ -15,21 +16,33 @@ message RegisterNodeRequest {
 }
 
 message RegisterNodeResponse {
-    // id of added Node
-    int64 id = 1;
-}
-
-message NodeStatusRequest {
-    // Node id
-    int64 id = 1;
-}
-
-message NodeStatusResponse {
     bool result = 1;
+}
+
+message LeaderStatusRequest {
+    // Node id
+    string id = 1;
+}
+
+message LeaderStatusResponse {
+    // Node id
+    string dependentID = 1;
+}
+
+message MemberStatusRequest {
+    // Node id
+    string id = 1;
+}
+
+message MemberStatusResponse {
+    // Node id
+    string dependentID = 1;
 }
 
 service Supervise {
     rpc Register(RegisterNodeRequest) returns (RegisterNodeResponse);
 
-    rpc Watch(NodeStatusRequest) returns (NodeStatusResponse);
+    rpc WatchLeader(LeaderStatusRequest) returns (LeaderStatusResponse);
+
+    rpc WatchMember(MemberStatusRequest) returns (stream MemberStatusResponse);
 }

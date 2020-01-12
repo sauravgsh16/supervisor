@@ -22,40 +22,72 @@ func nextID() int64 {
 }
 
 type nodeService struct {
-	domain *domain
+	domain     *domain
+	leaderDone chan interface{}
 }
 
 func newNodeService(ch chan interface{}) *nodeService {
+	l := make(chan interface{})
 	return &nodeService{
-		domain: newDomain(ch),
+		domain:     newDomain(ch, l),
+		leaderDone: l,
 	}
 }
 
 func (s *nodeService) Register(ctx context.Context, req *RegisterNodeRequest) (*RegisterNodeResponse, error) {
-	id := nextID()
+	id := req.GetNode().GetId()
 	n := &nodeCtx{
 		req.GetNode(),
-		make(chan interface{}),
+		make(chan string),
 	}
 	s.domain.add(id, n)
-	return &RegisterNodeResponse{Id: id}, nil
+	return &RegisterNodeResponse{Result: true}, nil
 }
 
-func (s *nodeService) Watch(ctx context.Context, req *NodeStatusRequest) (*NodeStatusResponse, error) {
+// WatchLeader checks if leader has been configured, returns leader id
+func (s *nodeService) WatchLeader(ctx context.Context, req *LeaderStatusRequest) (*LeaderStatusResponse, error) {
 	n := s.domain.get(req.Id)
 	if n == nil {
 		return nil, status.Error(codes.Internal, "failed to find node")
 	}
 	ticker := time.NewTicker(1 * time.Second)
+
+	var id string
 loop:
 	for {
 		select {
 		case <-ticker.C:
 			s.domain.watchCh <- n
-		case <-n.done:
+		case id = <-n.idCh:
 			break loop
 		}
 	}
 	ticker.Stop()
-	return &NodeStatusResponse{Result: true}, nil
+	return &LeaderStatusResponse{DependentID: id}, nil
+}
+
+// WatchMember checks if member has been configured. Sends id of every new member added
+func (s *nodeService) WatchMember(req *MemberStatusRequest, stream Supervise_WatchMemberServer) error {
+	n := s.domain.get(req.Id)
+	if n == nil {
+		return status.Error(codes.Internal, "failed to find node")
+	}
+
+	ticker := time.NewTicker(1 * time.Second)
+
+loop:
+	for {
+		select {
+		case <-ticker.C:
+			s.domain.watchCh <- n
+		case id := <-n.idCh:
+			stream.Send(&MemberStatusResponse{
+				DependentID: id,
+			})
+		case <-s.leaderDone:
+			break loop
+		}
+	}
+	ticker.Stop()
+	return nil
 }
