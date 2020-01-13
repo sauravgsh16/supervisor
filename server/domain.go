@@ -2,6 +2,7 @@ package supervisor
 
 import (
 	"log"
+	"runtime"
 	"sync"
 	"sync/atomic"
 )
@@ -112,6 +113,7 @@ loop:
 			}
 			break loop
 		}
+		runtime.Gosched()
 	}
 	close(d.watchCh)
 }

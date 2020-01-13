@@ -25,9 +25,9 @@ func main() {
 	defer cancel()
 
 	var id string = "a_test_member"
-	var wg sync.WaitGroup
 
-	for i := 0; i <= 10; i++ {
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func(i int, id string) {
 			defer wg.Done()
@@ -50,7 +50,7 @@ func main() {
 				Id: id,
 			}
 
-			respWatch, err := c.WatchLeader(ctx, waitReq)
+			respWatch, err := c.WatchLeader(context.Background(), waitReq)
 			if err != nil {
 				log.Fatalf(err.Error())
 			}
@@ -61,4 +61,28 @@ func main() {
 
 	wg.Wait()
 	fmt.Println("All done")
+	/*
+		registerReq := &supervisor.RegisterNodeRequest{
+			Node: &supervisor.Node{
+				Type: supervisor.Node_Member,
+				Id:   id,
+			},
+		}
+
+		resp, err := c.Register(ctx, registerReq)
+		if err != nil || !resp.Result {
+			log.Fatalf(err.Error())
+		}
+
+		waitReq := &supervisor.LeaderStatusRequest{
+			Id: id,
+		}
+
+		respWatch, err := c.WatchLeader(context.Background(), waitReq)
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+
+		fmt.Printf("%s\n", respWatch.DependentID)
+	*/
 }

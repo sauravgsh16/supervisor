@@ -2,7 +2,10 @@ package supervisor
 
 import (
 	"context"
+	fmt "fmt"
 	"math/rand"
+	"runtime"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -24,6 +27,7 @@ func nextID() int64 {
 type nodeService struct {
 	domain     *domain
 	leaderDone chan interface{}
+	wg         sync.WaitGroup
 }
 
 func newNodeService(ch chan interface{}) *nodeService {
@@ -41,6 +45,11 @@ func (s *nodeService) Register(ctx context.Context, req *RegisterNodeRequest) (*
 		make(chan string),
 	}
 	s.domain.add(id, n)
+
+	if n.Type == Node_Member {
+		s.wg.Add(1)
+	}
+
 	return &RegisterNodeResponse{Result: true}, nil
 }
 
@@ -50,9 +59,10 @@ func (s *nodeService) WatchLeader(ctx context.Context, req *LeaderStatusRequest)
 	if n == nil {
 		return nil, status.Error(codes.Internal, "failed to find node")
 	}
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(1 * time.Millisecond)
 
 	var id string
+	defer s.wg.Wait()
 loop:
 	for {
 		select {
@@ -73,7 +83,7 @@ func (s *nodeService) WatchMember(req *MemberStatusRequest, stream Supervise_Wat
 		return status.Error(codes.Internal, "failed to find node")
 	}
 
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(1 * time.Millisecond)
 
 loop:
 	for {
@@ -81,13 +91,19 @@ loop:
 		case <-ticker.C:
 			s.domain.watchCh <- n
 		case id := <-n.idCh:
-			stream.Send(&MemberStatusResponse{
+			if err := stream.Send(&MemberStatusResponse{
 				DependentID: id,
-			})
+			}); err != nil {
+				return err
+			}
+			s.wg.Done()
 		case <-s.leaderDone:
+			fmt.Println("Exiting loop ....")
 			break loop
 		}
+		runtime.Gosched()
 	}
 	ticker.Stop()
+
 	return nil
 }
