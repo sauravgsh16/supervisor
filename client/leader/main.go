@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"os/signal"
 	"time"
 
 	supervisor "github.com/sauravgsh16/supervisor/server"
@@ -66,7 +68,18 @@ func main() {
 		}
 	}(done)
 
-	for resp := range r {
-		fmt.Printf("%s\n", resp.DependentID)
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+
+loop:
+	for {
+		select {
+		case resp := <-r:
+			fmt.Printf("%s\n", resp.DependentID)
+		case <-ch:
+			done <- true
+			break loop
+		}
 	}
+	resSteam.CloseSend()
 }

@@ -60,6 +60,7 @@ func (s *server) run() error {
 			log.Println("shutting down supervisor server....")
 			s.done <- true
 			s.grpc.GracefulStop()
+			<-s.ctx.Done()
 		}
 	}()
 	return s.grpc.Serve(s.listener)
