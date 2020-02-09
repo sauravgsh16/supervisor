@@ -22,6 +22,7 @@ type domain struct {
 	prevMember int64
 	leaderID   string
 	memberID   []string
+	closed     bool
 }
 
 func newDomain(done, ldone chan interface{}) *domain {
@@ -103,15 +104,18 @@ loop:
 					select {
 					case n.idCh <- d.leaderID:
 					}
+					close(n.idCh)
 				}
 			}
 		case <-done:
 			log.Printf("closing domain")
 			select {
 			case d.ldone <- true:
+			default:
 			}
 			break loop
 		}
 	}
 	close(d.watchCh)
+	d.closed = true
 }

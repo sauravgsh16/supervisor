@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"log"
 	"os"
 
@@ -9,8 +8,7 @@ import (
 )
 
 func main() {
-	ctx := context.Background()
-	s := supervisor.NewServer(ctx, "9090")
+	s := supervisor.NewServer("9090")
 	if err := s.Run(); err != nil {
 		log.Println(err.Error())
 		os.Exit(1)

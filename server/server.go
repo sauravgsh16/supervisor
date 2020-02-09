@@ -1,7 +1,6 @@
 package supervisor
 
 import (
-	"context"
 	"errors"
 	"log"
 	"net"
@@ -19,17 +18,15 @@ type Server interface {
 type server struct {
 	port     string
 	service  *nodeService
-	ctx      context.Context
 	grpc     *grpc.Server
 	listener net.Listener
 	done     chan interface{}
 }
 
 // NewServer returns a new server
-func NewServer(ctx context.Context, port string) Server {
+func NewServer(port string) Server {
 	return &server{
 		port: port,
-		ctx:  ctx,
 		done: make(chan interface{}),
 	}
 }
@@ -62,7 +59,6 @@ func (s *server) run() error {
 		for range ch {
 			log.Println("shutting down supervisor server....")
 			s.done <- true
-			<-s.ctx.Done()
 			s.grpc.GracefulStop()
 		}
 	}()

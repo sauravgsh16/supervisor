@@ -50,18 +50,22 @@ func (s *nodeService) WatchLeader(ctx context.Context, req *LeaderStatusRequest)
 	if n == nil {
 		return nil, status.Error(codes.Internal, "failed to find node")
 	}
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(1 * time.Millisecond)
 
 	var id string
 loop:
 	for {
 		select {
 		case <-ticker.C:
+			if s.domain.closed {
+				return nil, nil
+			}
 			s.domain.watchCh <- n
 		case id = <-n.idCh:
 			break loop
 		}
 	}
+	close(n.idCh)
 	ticker.Stop()
 	return &LeaderStatusResponse{DependentID: id}, nil
 }
@@ -73,7 +77,7 @@ func (s *nodeService) WatchMember(req *MemberStatusRequest, stream Supervise_Wat
 		return status.Error(codes.Internal, "failed to find node")
 	}
 
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(1 * time.Millisecond)
 
 loop:
 	for {
