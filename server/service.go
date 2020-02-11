@@ -75,7 +75,6 @@ loop:
 			break loop
 		}
 	}
-	close(n.idCh)
 	ticker.Stop()
 	return &LeaderStatusResponse{DependentID: id}, nil
 }
