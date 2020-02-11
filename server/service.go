@@ -3,26 +3,13 @@ package supervisor
 import (
 	"context"
 	fmt "fmt"
-	"math/rand"
 	"runtime"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-var counter int64
-
-func init() {
-	rand.Seed(time.Now().UnixNano())
-	counter = time.Now().UnixNano()
-}
-
-func nextID() int64 {
-	return atomic.AddInt64(&counter, 1)
-}
 
 type nodeService struct {
 	domain     *domain
@@ -39,18 +26,21 @@ func newNodeService(ch chan interface{}) *nodeService {
 }
 
 func (s *nodeService) Register(ctx context.Context, req *RegisterNodeRequest) (*RegisterNodeResponse, error) {
-	id := req.GetNode().GetId()
+	nodeID := req.GetNode().GetId()
 	n := &nodeCtx{
 		req.GetNode(),
 		make(chan string),
 	}
-	s.domain.add(id, n)
+	id := s.domain.add(nodeID, n)
 
 	if n.Type == Node_Member {
 		s.wg.Add(1)
 	}
 
-	return &RegisterNodeResponse{Result: true}, nil
+	return &RegisterNodeResponse{
+		Result: true,
+		Id:     id,
+	}, nil
 }
 
 // WatchLeader checks if leader has been configured, returns leader id

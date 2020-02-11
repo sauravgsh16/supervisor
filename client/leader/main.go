@@ -39,6 +39,8 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
+	fmt.Printf("ID is %d\n", resp.Id)
+
 	waitReq := &supervisor.MemberStatusRequest{
 		Id: id,
 	}

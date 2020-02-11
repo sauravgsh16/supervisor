@@ -7,6 +7,16 @@ import (
 	"sync/atomic"
 )
 
+var counter int32
+
+func init() {
+	counter = 50
+}
+
+func nextID() int32 {
+	return atomic.AddInt32(&counter, 1)
+}
+
 var once sync.Once
 
 type nodeCtx struct {
@@ -58,7 +68,7 @@ func (d *domain) prevCount() int64 {
 	return atomic.LoadInt64(&d.prevMember)
 }
 
-func (d *domain) add(id string, n *nodeCtx) {
+func (d *domain) add(id string, n *nodeCtx) int32 {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
@@ -71,6 +81,7 @@ func (d *domain) add(id string, n *nodeCtx) {
 		d.addMember()
 		d.memberID = append(d.memberID, id)
 	}
+	return nextID()
 }
 
 func (d *domain) get(id string) *nodeCtx {
