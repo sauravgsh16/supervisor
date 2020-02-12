@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
 	"sync"
 	"time"
 
@@ -24,20 +23,15 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	var id string = "a_test_member"
-
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
-		go func(i int, id string) {
+		go func(i int) {
 			defer wg.Done()
 
-			s := strconv.Itoa(i)
-			id = id + s
 			registerReq := &supervisor.RegisterNodeRequest{
 				Node: &supervisor.Node{
 					Type: supervisor.Node_Member,
-					Id:   id,
 				},
 			}
 
@@ -46,10 +40,10 @@ func main() {
 				log.Fatalf(err.Error())
 			}
 
-			fmt.Printf("ID is %d\n", resp.Id)
+			fmt.Printf("ID is %s\n", resp.Id)
 
 			waitReq := &supervisor.LeaderStatusRequest{
-				Id: id,
+				Id: resp.Id,
 			}
 
 			respWatch, err := c.WatchLeader(context.Background(), waitReq)
@@ -58,7 +52,7 @@ func main() {
 			}
 
 			fmt.Printf("%s\n", respWatch.DependentID)
-		}(i, id)
+		}(i)
 	}
 
 	wg.Wait()

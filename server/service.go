@@ -26,12 +26,11 @@ func newNodeService(ch chan interface{}) *nodeService {
 }
 
 func (s *nodeService) Register(ctx context.Context, req *RegisterNodeRequest) (*RegisterNodeResponse, error) {
-	nodeID := req.GetNode().GetId()
 	n := &nodeCtx{
 		req.GetNode(),
 		make(chan string),
 	}
-	id := s.domain.add(nodeID, n)
+	id := s.domain.add(n)
 
 	if n.Type == Node_Member {
 		s.wg.Add(1)

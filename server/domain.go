@@ -3,6 +3,7 @@ package supervisor
 import (
 	"log"
 	"runtime"
+	"strconv"
 	"sync"
 	"sync/atomic"
 )
@@ -68,9 +69,11 @@ func (d *domain) prevCount() int64 {
 	return atomic.LoadInt64(&d.prevMember)
 }
 
-func (d *domain) add(id string, n *nodeCtx) int32 {
+func (d *domain) add(n *nodeCtx) string {
 	d.mux.Lock()
 	defer d.mux.Unlock()
+
+	id := strconv.Itoa(int(nextID()))
 
 	d.nodes[id] = n
 
@@ -81,7 +84,8 @@ func (d *domain) add(id string, n *nodeCtx) int32 {
 		d.addMember()
 		d.memberID = append(d.memberID, id)
 	}
-	return nextID()
+
+	return id
 }
 
 func (d *domain) get(id string) *nodeCtx {

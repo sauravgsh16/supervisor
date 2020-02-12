@@ -17,7 +17,7 @@ message RegisterNodeRequest {
 
 message RegisterNodeResponse {
     bool result = 1;
-    int32 id = 2;
+    string id = 2;
 }
 
 message LeaderStatusRequest {

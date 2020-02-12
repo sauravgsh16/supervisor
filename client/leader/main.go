@@ -25,11 +25,8 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	var id string = "a_test_leader"
-
 	registerReq := &supervisor.RegisterNodeRequest{
 		Node: &supervisor.Node{
-			Id:   id,
 			Type: supervisor.Node_Leader,
 		},
 	}
@@ -39,10 +36,10 @@ func main() {
 		log.Fatalf(err.Error())
 	}
 
-	fmt.Printf("ID is %d\n", resp.Id)
+	fmt.Printf("ID is %s\n", resp.Id)
 
 	waitReq := &supervisor.MemberStatusRequest{
-		Id: id,
+		Id: resp.Id,
 	}
 
 	done := make(chan interface{})
