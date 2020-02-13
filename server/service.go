@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	defaultVbsURL = "tcp://172.24.49.16:19000"
+	// defaultVbsURL = "tcp://172.24.49.16:19000"
+	defaultVbsURL = "tcp://localhost:19000"
 	hexchars      = "0123456789abcdef"
 )
 
@@ -72,19 +73,21 @@ type nodeService struct {
 	can        *can.Can
 }
 
-func newNodeService(ch chan interface{}) *nodeService {
-	l := make(chan interface{})
+func newNodeService(sdone chan interface{}) *nodeService {
+	ldone := make(chan interface{})
 
 	in := make(chan can.DataHolder)
 	c, err := can.New(defaultVbsURL, in)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
+	c.Init()
+
 	fmt.Println("Connected to can interface")
 
 	return &nodeService{
-		domain:     newDomain(ch, l),
-		leaderDone: l,
+		domain:     newDomain(sdone, ldone),
+		leaderDone: ldone,
 		can:        c,
 	}
 }
@@ -132,7 +135,7 @@ func (s *nodeService) WatchLeader(ctx context.Context, req *LeaderStatusRequest)
 	if n == nil {
 		return nil, status.Error(codes.Internal, "failed to find node")
 	}
-	ticker := time.NewTicker(1 * time.Millisecond)
+	ticker := time.NewTicker(1 * time.Second)
 
 	var id string
 	defer s.wg.Wait()
@@ -159,7 +162,7 @@ func (s *nodeService) WatchMember(req *MemberStatusRequest, stream Supervise_Wat
 		return status.Error(codes.Internal, "failed to find node")
 	}
 
-	ticker := time.NewTicker(1 * time.Millisecond)
+	ticker := time.NewTicker(1 * time.Second)
 
 loop:
 	for {
@@ -179,7 +182,8 @@ loop:
 		}
 	}
 	ticker.Stop()
+	fmt.Println("Closing can connection ....")
 	s.can.Close()
-
+	close(s.domain.watchCh)
 	return nil
 }

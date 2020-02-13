@@ -65,6 +65,7 @@ func main() {
 				break
 			}
 		}
+		fmt.Println("broken loop 1....")
 	}(done)
 
 	ch := make(chan os.Signal, 1)
@@ -76,9 +77,12 @@ loop:
 		case resp := <-r:
 			fmt.Printf("%s\n", resp.DependentID)
 		case <-ch:
-			done <- true
+			select {
+			case done <- true:
+			default:
+			}
+			fmt.Println("breaking loop 2....")
 			break loop
 		}
 	}
-	resSteam.CloseSend()
 }

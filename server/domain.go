@@ -2,7 +2,6 @@ package supervisor
 
 import (
 	"log"
-	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -131,8 +130,8 @@ loop:
 			}
 			break loop
 		}
-		runtime.Gosched()
+		// runtime.Gosched()
 	}
-	close(d.watchCh)
+	close(d.ldone)
 	d.closed = true
 }
