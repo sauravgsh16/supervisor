@@ -8,14 +8,14 @@ import (
 	"sync/atomic"
 )
 
-var counter int32
+var idCounter int32
 
 func init() {
-	counter = 50
+	idCounter = 50
 }
 
 func nextID() int32 {
-	return atomic.AddInt32(&counter, 1)
+	return atomic.AddInt32(&idCounter, 1)
 }
 
 var once sync.Once

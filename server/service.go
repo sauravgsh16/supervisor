@@ -2,26 +2,90 @@ package supervisor
 
 import (
 	"context"
-	fmt "fmt"
-	"runtime"
+	"fmt"
+	"log"
+	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
+	"github.com/sauravgsh16/can-interface"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+const (
+	defaultVbsURL = "tcp://172.24.49.16:19000"
+	hexchars      = "0123456789abcdef"
+)
+
+var (
+	canMsgCounter int32  = 10
+	msgStr        string = "Xtd 1 18EEFF%d 8 %02d 00 23 04 00 81 00 A0"
+)
+
+func nextCanID() int32 {
+	return atomic.AddInt32(&canMsgCounter, 1)
+
+}
+
+func encode(src byte) []byte {
+	dst := make([]byte, 2)
+	dst[0] = hexchars[src>>4]
+	dst[1] = hexchars[src&0x0F]
+	return dst
+}
+
+func fromHexChar(ch byte) (byte, bool) {
+	switch {
+	case '0' <= ch && ch <= '9':
+		return ch - '0', true
+	case 'a' <= ch && ch <= 'f':
+		return ch - 'a' + 10, true
+	case 'A' <= ch && ch <= 'F':
+		return ch - 'A' + 10, true
+	default:
+		return 0, false
+	}
+}
+
+func getHex(i int) byte {
+
+	sb := encode(byte(i))
+	a, ok := fromHexChar(sb[0])
+	if !ok {
+		fmt.Println("Error")
+	}
+	b, ok := fromHexChar(sb[1])
+	if !ok {
+		fmt.Println("Error")
+	}
+
+	h := a<<4 | b
+	return h
+}
 
 type nodeService struct {
 	domain     *domain
 	leaderDone chan interface{}
 	wg         sync.WaitGroup
+	can        *can.Can
 }
 
 func newNodeService(ch chan interface{}) *nodeService {
 	l := make(chan interface{})
+
+	in := make(chan can.DataHolder)
+	c, err := can.New(defaultVbsURL, in)
+	if err != nil {
+		log.Fatalf(err.Error())
+	}
+	fmt.Println("Connected to can interface")
+
 	return &nodeService{
 		domain:     newDomain(ch, l),
 		leaderDone: l,
+		can:        c,
 	}
 }
 
@@ -35,6 +99,26 @@ func (s *nodeService) Register(ctx context.Context, req *RegisterNodeRequest) (*
 	if n.Type == Node_Member {
 		s.wg.Add(1)
 	}
+
+	go func(id string) {
+
+		i, err := strconv.Atoi(id)
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+
+		hexI := getHex(i)
+		hexCounter := getHex(int(nextCanID()))
+
+		select {
+
+		case s.can.Out <- &can.Message{
+			ArbitrationID: []uint8{0x18, 0xee, 0xff, hexI},
+			Data:          []uint8{hexCounter, 0x00, 0x20, 0x4, 0x0, 0x81, 0x0, 0xa0},
+		}:
+
+		}
+	}(id)
 
 	return &RegisterNodeResponse{
 		Result: true,
@@ -93,9 +177,9 @@ loop:
 			fmt.Println("Exiting loop ....")
 			break loop
 		}
-		runtime.Gosched()
 	}
 	ticker.Stop()
+	s.can.Close()
 
 	return nil
 }
