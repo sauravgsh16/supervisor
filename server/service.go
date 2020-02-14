@@ -15,9 +15,10 @@ import (
 )
 
 const (
-	// defaultVbsURL = "tcp://172.24.49.16:19000"
-	defaultVbsURL = "tcp://localhost:19000"
-	hexchars      = "0123456789abcdef"
+	defaultVbsURL = "tcp://172.24.49.16:19000"
+	// defaultVbsURL = "tcp://localhost:19000"
+	hexchars = "0123456789abcdef"
+	name     = "Client Header \"0.1\" Name:\"SuperVisor\""
 )
 
 var (
@@ -75,9 +76,9 @@ type nodeService struct {
 
 func newNodeService(sdone chan interface{}) *nodeService {
 	ldone := make(chan interface{})
-
 	in := make(chan can.DataHolder)
-	c, err := can.New(defaultVbsURL, in)
+
+	c, err := can.New(defaultVbsURL, in, name)
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
